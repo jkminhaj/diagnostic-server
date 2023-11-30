@@ -9,7 +9,6 @@ app.use(cors())
 // mongodb
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-// const uri = "mongodb+srv://<username>:<password>@cluster0.szfaclu.mongodb.net/?retryWrites=true&w=majority";
 const uri = "mongodb+srv://doctorvai:jw2qo5wJHsPivPy9@cluster0.szfaclu.mongodb.net/?retryWrites=true&w=majority";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -34,12 +33,18 @@ async function run() {
     const bannerCollection = Database.collection('banners');
     const testCollection = Database.collection('tests');
     const reservationCollection = Database.collection('reservations');
+    const recommendationCollection = Database.collection('recommendations');
 
 
 // -----------------------------------USER------------------------------------
     // Users Api
     app.get('/users',async(req,res)=>{
-      const result = await userCollection.find().toArray();
+      const email = req.query.email ;
+      const query = {};
+      if(email){
+        query.email = email ;
+      }
+      const result = await userCollection.find(query).toArray();
       res.send(result);
     })
     // post user
@@ -48,6 +53,25 @@ async function run() {
       console.log('new user data' , req.body)
       const newUser = req.body ;
       const result = await userCollection.insertOne(newUser);
+      res.send(result);
+    })
+
+    // const NewDistrict = form.district.value;
+    // update user 
+    app.patch('/users/:email', async (req, res) => {
+      const emailP = req.params.email;
+      const newInfo = req.body ;
+      const filter = { email: emailP };
+      const updatedDoc = {
+        $set: {
+          name:newInfo.NewName,
+          avatar:newInfo.NewAvatar,
+          blood_group:newInfo.NewBlood,
+          upazila:newInfo.NewUpazila,
+          district:newInfo.NewDistrict
+        }
+      }
+      const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
 
@@ -169,6 +193,16 @@ async function run() {
     //   .toArray();
     //   res.send(result)
     // })
+
+    // decrement slot by 1
+    app.patch('/tests/slots/:id',async(req,res)=>{
+      const id = req.params.id ;
+      const updatedTest = await testCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $inc: { slots: -1 } }, 
+        { returnDocument: 'after' });
+      res.send({status : 'Done'})
+    })
     
 // -----------------------------------RESERVATION------------------------------------
     // get all reservations and with email
@@ -178,15 +212,40 @@ async function run() {
       if(email){
         query.email = email ;
       }
-      const result = await reservationCollection.find({query}).toArray();
+      const result = await reservationCollection.find(query).toArray();
       res.send(result);
     })
     // post a reservation
     app.post('/reservations',async(req,res)=>{
       const newReservation = req.body;
-      const result = await reservationCollection.insertOne(newTest);
+      const result = await reservationCollection.insertOne(newReservation);
       res.send(result);
     })
+    // cancel or delete a reservation 
+    app.delete('/reservations/cancel/:id' , async(req,res)=>{
+      console.log('cancel')
+      const id = req.params.id;
+      const query = {_id : new ObjectId(id)};
+      const result = await reservationCollection.deleteOne(query);
+      res.send(result);
+    })
+    // make test status delivered
+    app.patch('/reservations/delivered/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          report_status: 'delivered'
+        }
+      }
+      const result = await reservationCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+// --------------------------------Recommentions-------------------------------------
+    app.get('/recommendations',async(req,res)=>{
+      const result = await recommendationCollection.find().toArray();
+      res.send(result);
+    }) 
 
 
 
