@@ -36,22 +36,22 @@ async function run() {
     const recommendationCollection = Database.collection('recommendations');
 
 
-// -----------------------------------USER------------------------------------
+    // -----------------------------------USER------------------------------------
     // Users Api
-    app.get('/users',async(req,res)=>{
-      const email = req.query.email ;
+    app.get('/users', async (req, res) => {
+      const email = req.query.email;
       const query = {};
-      if(email){
-        query.email = email ;
+      if (email) {
+        query.email = email;
       }
       const result = await userCollection.find(query).toArray();
       res.send(result);
     })
     // post user
-    app.post('/users',async(req,res)=>{
+    app.post('/users', async (req, res) => {
       console.log('hitted post api')
-      console.log('new user data' , req.body)
-      const newUser = req.body ;
+      console.log('new user data', req.body)
+      const newUser = req.body;
       const result = await userCollection.insertOne(newUser);
       res.send(result);
     })
@@ -60,15 +60,15 @@ async function run() {
     // update user 
     app.patch('/users/:email', async (req, res) => {
       const emailP = req.params.email;
-      const newInfo = req.body ;
+      const newInfo = req.body;
       const filter = { email: emailP };
       const updatedDoc = {
         $set: {
-          name:newInfo.NewName,
-          avatar:newInfo.NewAvatar,
-          blood_group:newInfo.NewBlood,
-          upazila:newInfo.NewUpazila,
-          district:newInfo.NewDistrict
+          name: newInfo.NewName,
+          avatar: newInfo.NewAvatar,
+          blood_group: newInfo.NewBlood,
+          upazila: newInfo.NewUpazila,
+          district: newInfo.NewDistrict
         }
       }
       const result = await userCollection.updateOne(filter, updatedDoc);
@@ -133,54 +133,54 @@ async function run() {
       res.send({ admin });
     })
 
-// --------------------------------BANNER------------------------------------- 
+    // --------------------------------BANNER------------------------------------- 
 
     // post banner
-    app.post('/banners',async(req,res)=>{
+    app.post('/banners', async (req, res) => {
       const newBanner = req.body;
       const result = await bannerCollection.insertOne(newBanner);
       res.send(result);
     })
     // get all banners
-    app.get('/banners',async(req,res)=>{
+    app.get('/banners', async (req, res) => {
       const result = await bannerCollection.find().toArray();
       res.send(result);
     })
     // delete a banner 
-    app.delete('/banners/:id' , async(req,res)=>{
+    app.delete('/banners/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await bannerCollection.deleteOne(query);
       res.send(result);
     })
 
     // set a banner for home
-    app.patch('/banners/select/:id',async(req,res)=>{
-      const id = req.params.id ;
-      const query = {_id : new ObjectId(id)};
+    app.patch('/banners/select/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
       // making all false
       await bannerCollection.updateMany({}, { $set: { isActive: false } });
-      const updatedBanner =  await bannerCollection.findOneAndUpdate(query,{$set:{isActive:true}},{ new:true})
+      const updatedBanner = await bannerCollection.findOneAndUpdate(query, { $set: { isActive: true } }, { new: true })
       res.send(updatedBanner);
     })
 
-// -----------------------------------TEST------------------------------------
+    // -----------------------------------TEST------------------------------------
 
     // get a single test
-    app.get('/tests/:id',async(req,res)=>{
-      const id = req.params.id ;
-      const query = {_id : new ObjectId(id)};
+    app.get('/tests/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
       const result = await testCollection.findOne(query);
       res.send(result)
     })
     // post test
-    app.post('/tests',async(req,res)=>{
+    app.post('/tests', async (req, res) => {
       const newTest = req.body;
       const result = await testCollection.insertOne(newTest);
       res.send(result);
     })
     // get all test
-    app.get('/tests',async(req,res)=>{
+    app.get('/tests', async (req, res) => {
       const result = await testCollection.find().toArray();
       res.send(result);
     })
@@ -195,37 +195,84 @@ async function run() {
     // })
 
     // decrement slot by 1
-    app.patch('/tests/slots/:id',async(req,res)=>{
-      const id = req.params.id ;
+    app.patch('/tests/slots/:id', async (req, res) => {
+      const id = req.params.id;
       const updatedTest = await testCollection.findOneAndUpdate(
         { _id: new ObjectId(id) },
-        { $inc: { slots: -1 } }, 
+        { $inc: { slots: -1 } },
         { returnDocument: 'after' });
-      res.send({status : 'Done'})
+      res.send({ status: 'Done' })
     })
-    
-// -----------------------------------RESERVATION------------------------------------
+
+    // delete a test
+    app.delete('/tests/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await testCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    // update a test 
+    app.patch('/tests/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedTest = req.body;
+      const updatedDoc = {
+        $set: {
+          testName: updatedTest.NewTestName,
+          imageUrl: updatedTest.NewImageUrl,
+          details: updatedTest.NewDetails,
+          price: updatedTest.NewPrice,
+          date: updatedTest.NewDate,
+          slots: updatedTest.NewSlots
+        }
+      }
+      const result = await testCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    })
+
+
+
+    // ----------------- Pagination part
+
+    app.get('/testsCount', async (req, res) => {
+      const count = await testCollection.estimatedDocumentCount();
+      res.send({ count });
+    })
+    app.get('/testsPagination', async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+      console.log('pagination query', page, size);
+      const result = await testCollection.find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    })
+
+    // -----------------------------------RESERVATION------------------------------------
     // get all reservations and with email
-    app.get('/reservations',async(req,res)=>{
-      const email = req.query.email ;
+    app.get('/reservations', async (req, res) => {
+      const email = req.query.email;
       const query = {};
-      if(email){
-        query.email = email ;
+      if (email) {
+        query.email = email;
       }
       const result = await reservationCollection.find(query).toArray();
       res.send(result);
     })
     // post a reservation
-    app.post('/reservations',async(req,res)=>{
+    app.post('/reservations', async (req, res) => {
       const newReservation = req.body;
       const result = await reservationCollection.insertOne(newReservation);
       res.send(result);
     })
     // cancel or delete a reservation 
-    app.delete('/reservations/cancel/:id' , async(req,res)=>{
+    app.delete('/reservations/cancel/:id', async (req, res) => {
       console.log('cancel')
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await reservationCollection.deleteOne(query);
       res.send(result);
     })
@@ -241,13 +288,11 @@ async function run() {
       const result = await reservationCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
-// --------------------------------Recommentions-------------------------------------
-    app.get('/recommendations',async(req,res)=>{
+    // --------------------------------Recommentions-------------------------------------
+    app.get('/recommendations', async (req, res) => {
       const result = await recommendationCollection.find().toArray();
       res.send(result);
-    }) 
-
-
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
